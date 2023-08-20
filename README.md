@@ -26,7 +26,7 @@ pnpm build
 
 [curtastic](https://github.com/curtastic) for [p1.js, the tiny piano](https://github.com/curtastic/p1)
 
-[xem](https://github.com/xem) for [W.js](https://xem.github.io/W/)
+[Felipe Alfonso](https://twitter.com/bitnenfer/) for [TinyCanvas](https://github.com/bitnenfer/)
 
 [Frank Force](https://twitter.com/KilledByAPixel) for [ZzFX](https://github.com/KilledByAPixel/ZzFX)
 
