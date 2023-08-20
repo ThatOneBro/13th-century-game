@@ -3,7 +3,7 @@ import { initMouse, mouse, updateMouse } from "./mouse";
 import { music } from "./music";
 import { zzfx, zzfxP } from "./zzfx";
 
-const DEBUG = process.env.NODE_ENV === "production";
+const DEBUG = process.env.NODE_ENV !== "production";
 const debug = DEBUG ? console.log : () => {};
 
 const WIDTH = 480;
