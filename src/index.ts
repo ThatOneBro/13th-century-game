@@ -2,7 +2,7 @@ import { initKeys, KEY_A, KEY_D, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_S, KEY_UP, K
 import { initMouse, mouse, updateMouse } from "./mouse";
 import { music } from "./music";
 import { zzfx, zzfxP } from "./deps/zzfx";
-// import { TC } from "./deps/tc";
+import { TC, TCTex } from "./deps/tc";
 
 const DEBUG = import.meta.env.DEV;
 const debug = DEBUG ? console.log : () => {};
@@ -27,10 +27,13 @@ const MAX_ENTITIES = 2000;
 type EntityId = number;
 
 const canvas = document.querySelector("#c") as HTMLCanvasElement;
-const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
+const renderer = TC(canvas)!; // This is dangerous but in dev mode if the renderer fails to intialize we will get a debug message
+DEBUG && !renderer && debug("The WebGL renderer is broken!");
 
 const image = new Image();
 image.src = "i.png";
+const textureAtlas = TCTex(renderer.g, image, image.width, image.height)!;
+DEBUG && !textureAtlas && debug("The texture atlas failed to load!");
 
 const entityIdFreeList = [] as number[];
 const entities = [] as EntityId[];
@@ -241,12 +244,11 @@ function collisionDetection(): void {
 function render(): void {
   const { entityType, health, x, y } = entityData;
 
-  ctx.fillStyle = "#111";
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  renderer.bkg(0x1, 0x1, 0x1);
 
   for (let i = 0; i < entities.length; i += 1) {
     const entity = entities[i];
-    ctx.drawImage(image, entityType[entity] * 8, 8, 8, 8, x[entity] | 0, y[entity] | 0, 8, 8);
+    renderer.img(textureAtlas, entityType[entity] * 8, 8, 8, 8, x[entity] | 0, y[entity] | 0, 8, 8);
   }
 
   drawString("HEALTH  " + health[player], 4, 5);
@@ -255,13 +257,15 @@ function render(): void {
 
   drawString("ARROW KEYS OR WASD TO MOVE", 4, 250);
   drawString("LEFT CLICK TO SHOOT", 4, 260);
+
+  renderer.flush();
 }
 
 function drawString(str: string, x: number, y: number): void {
   for (let i = 0; i < str.length; i++) {
     const charCode = str.charCodeAt(i);
     const charIndex = charCode < 65 ? charCode - 48 : charCode - 55;
-    ctx.drawImage(image, charIndex * 6, 0, 6, 6, x, y, 6, 6);
+    renderer.img(textureAtlas, charIndex * 6, 0, 6, 6, x, y, 6, 6);
     x += 6;
   }
 }
