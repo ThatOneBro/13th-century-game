@@ -20,7 +20,7 @@ const ENTITY_TYPE_GEM = 6;
 const PLAYER_SPEED = 2;
 const BULLET_SPEED = 4;
 const SPIDER_SPEED = 1;
-const MAX_ENTITIES = 1000;
+const MAX_ENTITIES = 2000;
 
 type EntityId = number;
 
@@ -35,11 +35,11 @@ const entities = [] as EntityId[];
 let nextFreeEntityId = 0;
 const entityData = {
   entityType: new Uint8Array(MAX_ENTITIES),
-  x: new Int32Array(MAX_ENTITIES),
-  y: new Int32Array(MAX_ENTITIES),
-  dx: new Int32Array(MAX_ENTITIES),
-  dy: new Int32Array(MAX_ENTITIES),
-  health: new Uint32Array(MAX_ENTITIES),
+  x: new Float32Array(MAX_ENTITIES),
+  y: new Float32Array(MAX_ENTITIES),
+  dx: new Float32Array(MAX_ENTITIES),
+  dy: new Float32Array(MAX_ENTITIES),
+  health: new Int32Array(MAX_ENTITIES),
   cooldown: new Uint32Array(MAX_ENTITIES),
 } as const;
 
@@ -169,7 +169,7 @@ function ai(): void {
     // Clear out dead entities
     if (health[entity] <= 0) {
       entities.splice(i, 1);
-      entityIdFreeList.push(i);
+      entityIdFreeList.push(entity);
     }
   }
 }
