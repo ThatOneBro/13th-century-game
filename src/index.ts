@@ -88,8 +88,6 @@ function gameLoop(): void {
     ai();
     collisionDetection();
   }
-
-  render();
 }
 
 function handleInput(): void {
@@ -224,4 +222,15 @@ function drawString(str: string, x: number, y: number): void {
 
 const distance = (a: Entity, b: Entity): number => Math.hypot(a.x - b.x, a.y - b.y);
 
-window.setInterval(gameLoop, MILLIS_PER_FRAME);
+function renderWithUpdate(): void {
+  gameLoop();
+  render();
+  requestAnimationFrame(renderWithoutUpdate);
+}
+
+function renderWithoutUpdate(): void {
+  render();
+  requestAnimationFrame(renderWithUpdate);
+}
+
+requestAnimationFrame(renderWithUpdate);
