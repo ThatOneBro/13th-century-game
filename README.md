@@ -7,7 +7,7 @@ Generated with [codyebberson's js13k-starter-2022](https://github.com/codyebbers
 Start the dev server with hot reload:
 
 ```bash
-pnpm run dev
+pnpm dev
 ```
 
 Open your web browser to <http://localhost:3000/>
@@ -17,7 +17,7 @@ Open your web browser to <http://localhost:3000/>
 Create a final production build:
 
 ```bash
-pnpm run build
+pnpm build
 ```
 
 ## Acknowledgements
