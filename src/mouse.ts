@@ -1,4 +1,4 @@
-import { newInput, updateInput } from './input';
+import { newInput, updateInput } from "./input";
 
 export const mouse = {
   /**
@@ -24,13 +24,13 @@ export const mouse = {
  * @param el The HTML element to listen on.
  */
 export function initMouse(el: HTMLElement): void {
-  el.addEventListener('mousedown', (e) => {
+  el.addEventListener("mousedown", (e) => {
     mouse.buttons[e.button].down = true;
   });
-  el.addEventListener('mouseup', (e) => {
+  el.addEventListener("mouseup", (e) => {
     mouse.buttons[e.button].down = false;
   });
-  el.addEventListener('mousemove', (e) => {
+  el.addEventListener("mousemove", (e) => {
     mouse.x = e.pageX - el.offsetLeft;
     mouse.y = e.pageY - el.offsetTop;
   });

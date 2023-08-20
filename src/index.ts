@@ -1,7 +1,7 @@
-import { initKeys, KEY_A, KEY_D, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_S, KEY_UP, KEY_W, keys, updateKeys } from './keys';
-import { initMouse, mouse, updateMouse } from './mouse';
-import { music } from './music';
-import { zzfx, zzfxP } from './zzfx';
+import { initKeys, KEY_A, KEY_D, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_S, KEY_UP, KEY_W, keys, updateKeys } from "./keys";
+import { initMouse, mouse, updateMouse } from "./mouse";
+import { music } from "./music";
+import { zzfx, zzfxP } from "./zzfx";
 
 const WIDTH = 480;
 const HEIGHT = 270;
@@ -29,11 +29,11 @@ interface Entity {
   cooldown: number;
 }
 
-const canvas = document.querySelector('#c') as HTMLCanvasElement;
-const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+const canvas = document.querySelector("#c") as HTMLCanvasElement;
+const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 
 const image = new Image();
-image.src = 'i.png';
+image.src = "i.png";
 
 const entities: Entity[] = [];
 
@@ -193,19 +193,19 @@ function collisionDetection(): void {
 }
 
 function render(): void {
-  ctx.fillStyle = '#111';
+  ctx.fillStyle = "#111";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
   for (const entity of entities) {
     ctx.drawImage(image, entity.entityType * 8, 8, 8, 8, entity.x | 0, entity.y | 0, 8, 8);
   }
 
-  drawString('HEALTH  ' + player.health, 4, 5);
-  drawString('SCORE   ' + score, 4, 15);
-  drawString('TIME    ' + (time | 0), 4, 25);
+  drawString("HEALTH  " + player.health, 4, 5);
+  drawString("SCORE   " + score, 4, 15);
+  drawString("TIME    " + (time | 0), 4, 25);
 
-  drawString('ARROW KEYS OR WASD TO MOVE', 4, 250);
-  drawString('LEFT CLICK TO SHOOT', 4, 260);
+  drawString("ARROW KEYS OR WASD TO MOVE", 4, 250);
+  drawString("LEFT CLICK TO SHOOT", 4, 260);
 }
 
 function drawString(str: string, x: number, y: number): void {

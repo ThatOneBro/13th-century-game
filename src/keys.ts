@@ -1,4 +1,4 @@
-import { Input, newInput, updateInput } from './input';
+import { Input, newInput, updateInput } from "./input";
 
 export const KEY_LEFT = 37;
 export const KEY_UP = 38;
@@ -25,9 +25,9 @@ export function initKeys(el: HTMLElement): void {
     keys[i] = newInput();
   }
 
-  el.addEventListener('click', handleClick);
-  el.addEventListener('keydown', (e) => setKey(e, true));
-  el.addEventListener('keyup', (e) => setKey(e, false));
+  el.addEventListener("click", handleClick);
+  el.addEventListener("keydown", (e) => setKey(e, true));
+  el.addEventListener("keyup", (e) => setKey(e, false));
 }
 
 function handleClick(e: MouseEvent): void {

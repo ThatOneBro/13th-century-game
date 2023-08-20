@@ -103,7 +103,7 @@ export function zzfxG(
   delay = 0,
   sustainVolume = 1,
   decay = 0,
-  tremolo = 0
+  tremolo = 0,
 ): number[] {
   // init parameters
   const PI2 = Math.PI * 2;
