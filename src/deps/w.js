@@ -1,3 +1,5 @@
+/* CREDIT TO: xem [https://github.com/xem] */
+
 // WebGL framework
 // ===============
 
