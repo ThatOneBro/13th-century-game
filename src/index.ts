@@ -169,6 +169,7 @@ function collisionDetection(): void {
         ) {
           entity.health = 0; // Kill the bullet
           other.entityType = ENTITY_TYPE_GEM; // Turn the bullet into a gem
+          /* eslint-disable-next-line no-sparse-arrays */
           zzfx(...[0.4, , 368, 0.01, 0.1, 0.3, 4, 0.31, , , , , , 1.7, , 0.4, , 0.46, 0.1]);
         }
         if (entity === player && (other.entityType === ENTITY_TYPE_SNAKE || other.entityType === ENTITY_TYPE_SPIDER)) {
@@ -176,15 +177,19 @@ function collisionDetection(): void {
           other.health = 0; // Remove the enemy
           if (player.health <= 0) {
             // Game over
+            /* eslint-disable-next-line no-sparse-arrays */
             zzfx(...[2.89, , 752, 0.04, 0.4, 0.44, 1, 1.39, 1, , , , 0.15, 1.3, 19, 0.9, 0.32, 0.39, 0.15, 0.31]);
           } else {
             // Just a flesh wound
+
+            /* eslint-disable-next-line no-sparse-arrays */
             zzfx(...[2, , 433, 0.01, 0.06, 0.11, 1, 2.79, 7.7, -8.6, , , , 1.7, , 0.4, , 0.54, 0.05]);
           }
         }
         if (entity === player && other.entityType === ENTITY_TYPE_GEM) {
           score += 100;
           other.health = 0;
+          /* eslint-disable-next-line no-sparse-arrays */
           zzfx(...[, , 1267, 0.01, 0.09, 0.15, , 1.95, , , 412, 0.06, , , , , , 0.45, 0.02]);
         }
       }
