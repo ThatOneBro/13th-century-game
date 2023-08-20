@@ -1,6 +1,7 @@
 /*
  * TinyCanvas module (https://github.com/bitnenfer/tiny-canvas)
  * Developed by Felipe Alfonso -> https://twitter.com/bitnenfer/
+ * Converted to TS by Derrick Farris -> https://twitter.com/ThatOneBrah
  *
  *  ----------------------------------------------------------------------
  *
@@ -22,32 +23,76 @@
  *
  */
 
-function CompileShader(gl, source, type) {
-  var shader = gl.createShader(type);
+type WebGLTextureType = WebGLTexture & {
+  width: number;
+  height: number;
+};
+
+type Renderer = {
+  g: WebGL2RenderingContext;
+  c: HTMLCanvasElement;
+  col: number;
+  bkg: (r: number, g: number, b: number) => void;
+  cls: () => void;
+  trans: (x: number, y: number) => void;
+  scale: (x: number, y: number) => void;
+  rot: (r: number) => void;
+  push: () => void;
+  pop: () => void;
+  img: (
+    texture: WebGLTextureType,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    u0: number,
+    v0: number,
+    u1: number,
+    v1: number,
+  ) => void;
+  flush: () => void;
+};
+
+function CompileShader(gl: WebGL2RenderingContext, source: string, type: number): WebGLShader | null {
+  const shader = gl.createShader(type);
+  if (!shader) return shader;
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
   return shader;
 }
 
-function CreateShaderProgram(gl, vsSource, fsSource) {
-  var program = gl.createProgram(),
+function CreateShaderProgram(gl: WebGL2RenderingContext, vsSource: string, fsSource: string): WebGLProgram | null {
+  const program = gl.createProgram(),
     vShader = CompileShader(gl, vsSource, 35633),
     fShader = CompileShader(gl, fsSource, 35632);
+  if (!program || !vShader || !fShader) return null;
   gl.attachShader(program, vShader);
   gl.attachShader(program, fShader);
   gl.linkProgram(program);
   return program;
 }
 
-function CreateBuffer(gl, bufferType, size, usage) {
-  var buffer = gl.createBuffer();
+function CreateBuffer(
+  gl: WebGL2RenderingContext,
+  bufferType: GLenum,
+  size: GLsizeiptr,
+  usage: GLenum,
+): WebGLBuffer | null {
+  const buffer = gl.createBuffer();
+  if (!buffer) return buffer;
   gl.bindBuffer(bufferType, buffer);
   gl.bufferData(bufferType, size, usage);
   return buffer;
 }
 
-function CreateTexture(gl, image, width, height) {
-  var texture = gl.createTexture();
+function CreateTexture(
+  gl: WebGL2RenderingContext,
+  image: TexImageSource,
+  width: number,
+  height: number,
+): WebGLTextureType | null {
+  const texture = gl.createTexture() as WebGLTextureType;
+  if (!texture) return texture;
   gl.bindTexture(3553, texture);
   gl.texParameteri(3553, 10242, 33071);
   gl.texParameteri(3553, 10243, 33071);
@@ -60,81 +105,88 @@ function CreateTexture(gl, image, width, height) {
   return texture;
 }
 
-function TinyCanvas(canvas) {
-  var gl = canvas.getContext("webgl"),
-    VERTEX_SIZE = 4 * 2 + 4 * 2 + 4,
-    MAX_BATCH = 10922, // floor((2 ^ 16) / 6)
-    MAX_STACK = 100,
-    MAT_SIZE = 6,
-    VERTICES_PER_QUAD = 6,
-    MAT_STACK_SIZE = MAX_STACK * MAT_SIZE,
-    VERTEX_DATA_SIZE = VERTEX_SIZE * MAX_BATCH * 4,
-    INDEX_DATA_SIZE = MAX_BATCH * (2 * VERTICES_PER_QUAD),
-    width = canvas.width,
-    height = canvas.height,
-    shader = CreateShaderProgram(
-      gl,
-      [
-        "precision lowp float;",
-        // IN Vertex Position and
-        // IN Texture Coordinates
-        "attribute vec2 a, b;",
-        // IN Vertex Color
-        "attribute vec4 c;",
-        // OUT Texture Coordinates
-        "varying vec2 d;",
-        // OUT Vertex Color
-        "varying vec4 e;",
-        // CONST View Matrix
-        "uniform mat4 m;",
-        "uniform vec2 r;",
-        "void main(){",
-        "gl_Position=m*vec4(a,1.0,1.0);",
-        "d=b;",
-        "e=c;",
-        "}",
-      ].join("\n"),
-      [
-        "precision lowp float;",
-        // OUT Texture Coordinates
-        "varying vec2 d;",
-        // OUT Vertex Color
-        "varying vec4 e;",
-        // CONST Single Sampler2D
-        "uniform sampler2D f;",
-        "void main(){",
-        "gl_FragColor=texture2D(f,d)*e;",
-        "}",
-      ].join("\n"),
-    ),
-    glBufferSubData = gl.bufferSubData.bind(gl),
-    glDrawElements = gl.drawElements.bind(gl),
-    glBindTexture = gl.bindTexture.bind(gl),
-    glClear = gl.clear.bind(gl),
-    glClearColor = gl.clearColor.bind(gl),
-    vertexData = new ArrayBuffer(VERTEX_DATA_SIZE),
-    vPositionData = new Float32Array(vertexData),
-    vColorData = new Uint32Array(vertexData),
-    vIndexData = new Uint16Array(INDEX_DATA_SIZE),
-    IBO = CreateBuffer(gl, 34963, vIndexData.byteLength, 35044),
-    VBO = CreateBuffer(gl, 34962, vertexData.byteLength, 35048),
-    count = 0,
-    mat = new Float32Array([1, 0, 0, 1, 0, 0]),
-    stack = new Float32Array(100),
-    stackp = 0,
-    cos = Math.cos,
-    sin = Math.sin,
-    currentTexture = null,
-    renderer = null,
-    locA,
-    locB,
-    locC;
+function TinyCanvas(canvas: HTMLCanvasElement): Renderer | null {
+  const gl = canvas.getContext("webgl2");
+  const VERTEX_SIZE = 4 * 2 + 4 * 2 + 4;
+  const MAX_BATCH = 10922; // floor((2 ^ 16) / 6)
+  // const MAX_STACK = 100;
+  // const MAT_SIZE = 6;
+  const VERTICES_PER_QUAD = 6;
+  // const MAT_STACK_SIZE = MAX_STACK * MAT_SIZE;
+  const VERTEX_DATA_SIZE = VERTEX_SIZE * MAX_BATCH * 4;
+  const INDEX_DATA_SIZE = MAX_BATCH * (2 * VERTICES_PER_QUAD);
+
+  const width = canvas.width;
+  const height = canvas.height;
+  if (!gl) return gl;
+
+  const shader = CreateShaderProgram(
+    gl,
+    [
+      "precision lowp float;",
+      // IN Vertex Position and
+      // IN Texture Coordinates
+      "attribute vec2 a, b;",
+      // IN Vertex Color
+      "attribute vec4 c;",
+      // OUT Texture Coordinates
+      "varying vec2 d;",
+      // OUT Vertex Color
+      "varying vec4 e;",
+      // CONST View Matrix
+      "uniform mat4 m;",
+      "uniform vec2 r;",
+      "void main(){",
+      "gl_Position=m*vec4(a,1.0,1.0);",
+      "d=b;",
+      "e=c;",
+      "}",
+    ].join("\n"),
+    [
+      "precision lowp float;",
+      // OUT Texture Coordinates
+      "varying vec2 d;",
+      // OUT Vertex Color
+      "varying vec4 e;",
+      // CONST Single Sampler2D
+      "uniform sampler2D f;",
+      "void main(){",
+      "gl_FragColor=texture2D(f,d)*e;",
+      "}",
+    ].join("\n"),
+  );
+
+  if (!shader) return shader;
+
+  const cos = Math.cos;
+  const sin = Math.sin;
+
+  const glBufferSubData = gl.bufferSubData.bind(gl);
+  const glDrawElements = gl.drawElements.bind(gl);
+  const glBindTexture = gl.bindTexture.bind(gl);
+  const glClear = gl.clear.bind(gl);
+  const glClearColor = gl.clearColor.bind(gl);
+  const vertexData = new ArrayBuffer(VERTEX_DATA_SIZE);
+  const vPositionData = new Float32Array(vertexData);
+  const vColorData = new Uint32Array(vertexData);
+  const vIndexData = new Uint16Array(INDEX_DATA_SIZE);
+  const IBO = CreateBuffer(gl, 34963, vIndexData.byteLength, 35044);
+  const VBO = CreateBuffer(gl, 34962, vertexData.byteLength, 35048);
+
+  const mat = new Float32Array([1, 0, 0, 1, 0, 0]);
+  const stack = new Float32Array(100);
+
+  let stackp = 0;
+  let count = 0;
+  let currentTexture: WebGLTextureType | null = null;
 
   gl.blendFunc(770, 771);
   gl.enable(3042);
   gl.useProgram(shader);
   gl.bindBuffer(34963, IBO);
-  for (var indexA = (indexB = 0); indexA < MAX_BATCH * VERTICES_PER_QUAD; indexA += VERTICES_PER_QUAD, indexB += 4)
+
+  let indexB;
+  for (let indexA = (indexB = 0); indexA < MAX_BATCH * VERTICES_PER_QUAD; indexA += VERTICES_PER_QUAD, indexB += 4)
     (vIndexData[indexA + 0] = indexB),
       (vIndexData[indexA + 1] = indexB + 1),
       (vIndexData[indexA + 2] = indexB + 2),
@@ -144,43 +196,46 @@ function TinyCanvas(canvas) {
 
   glBufferSubData(34963, 0, vIndexData);
   gl.bindBuffer(34962, VBO);
-  locA = gl.getAttribLocation(shader, "a");
-  locB = gl.getAttribLocation(shader, "b");
-  locC = gl.getAttribLocation(shader, "c");
+
+  const locA = gl.getAttribLocation(shader, "a");
+  const locB = gl.getAttribLocation(shader, "b");
+  const locC = gl.getAttribLocation(shader, "c");
+
   gl.enableVertexAttribArray(locA);
-  gl.vertexAttribPointer(locA, 2, 5126, 0, VERTEX_SIZE, 0);
+  gl.vertexAttribPointer(locA, 2, 5126, false, VERTEX_SIZE, 0);
   gl.enableVertexAttribArray(locB);
-  gl.vertexAttribPointer(locB, 2, 5126, 0, VERTEX_SIZE, 8);
+  gl.vertexAttribPointer(locB, 2, 5126, false, VERTEX_SIZE, 8);
   gl.enableVertexAttribArray(locC);
-  gl.vertexAttribPointer(locC, 4, 5121, 1, VERTEX_SIZE, 16);
+  gl.vertexAttribPointer(locC, 4, 5121, true, VERTEX_SIZE, 16);
   gl.uniformMatrix4fv(
     gl.getUniformLocation(shader, "m"),
-    0,
+    false,
     new Float32Array([2 / width, 0, 0, 0, 0, -2 / height, 0, 0, 0, 0, 1, 1, -1, 1, 0, 0]),
   );
   gl.activeTexture(33984);
-  renderer = {
+
+  const renderer = {
     g: gl,
     c: canvas,
     col: 0xffffffff,
-    bkg: function (r, g, b) {
+    bkg: function (r: number, g: number, b: number) {
       glClearColor(r, g, b, 1);
     },
     cls: function () {
       glClear(16384);
     },
-    trans: function (x, y) {
+    trans: function (x: number, y: number) {
       mat[4] = mat[0] * x + mat[2] * y + mat[4];
       mat[5] = mat[1] * x + mat[3] * y + mat[5];
     },
-    scale: function (x, y) {
+    scale: function (x: number, y: number) {
       mat[0] = mat[0] * x;
       mat[1] = mat[1] * x;
       mat[2] = mat[2] * y;
       mat[3] = mat[3] * y;
     },
-    rot: function (r) {
-      var a = mat[0],
+    rot: function (r: number) {
+      const a = mat[0],
         b = mat[1],
         c = mat[2],
         d = mat[3],
@@ -210,8 +265,18 @@ function TinyCanvas(canvas) {
       mat[4] = stack[stackp + 4];
       mat[5] = stack[stackp + 5];
     },
-    img: function (texture, x, y, w, h, u0, v0, u1, v1) {
-      var x0 = x,
+    img: function (
+      texture: WebGLTextureType,
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      u0: number,
+      v0: number,
+      u1: number,
+      v1: number,
+    ) {
+      const x0 = x,
         y0 = y,
         x1 = x + w,
         y1 = y + h,
@@ -225,8 +290,9 @@ function TinyCanvas(canvas) {
         d = mat[3],
         e = mat[4],
         f = mat[5],
-        offset = 0,
-        argb = renderer["col"];
+        argb = renderer!.col;
+
+      let offset = 0;
 
       if (texture != currentTexture || count + 1 >= MAX_BATCH) {
         glBufferSubData(34962, 0, vertexData);
@@ -281,7 +347,7 @@ function TinyCanvas(canvas) {
       glDrawElements(4, count * VERTICES_PER_QUAD, 5123, 0);
       count = 0;
     },
-  };
+  } satisfies Renderer;
   return renderer;
 }
 

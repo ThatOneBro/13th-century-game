@@ -1,5 +1,5 @@
 /* eslint-disable no-sparse-arrays */
-import { zzfxM } from "./zzfxm";
+import { zzfxM } from "./deps/zzfxm";
 
 export const music = zzfxM(
   [

@@ -1,7 +1,8 @@
 import { initKeys, KEY_A, KEY_D, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_S, KEY_UP, KEY_W, keys, updateKeys } from "./keys";
 import { initMouse, mouse, updateMouse } from "./mouse";
 import { music } from "./music";
-import { zzfx, zzfxP } from "./zzfx";
+import { zzfx, zzfxP } from "./deps/zzfx";
+// import { TC } from "./deps/tc";
 
 const DEBUG = import.meta.env.DEV;
 const debug = DEBUG ? console.log : () => {};
