@@ -10,16 +10,17 @@ const WIDTH = 480;
 const HEIGHT = 270;
 const CENTER_X = WIDTH / 2;
 const CENTER_Y = HEIGHT / 2;
-// const MILLIS_PER_SECOND = 1000;
-// const FRAMES_PER_SECOND = 30;
+
 const ENTITY_TYPE_PLAYER = 0;
 const ENTITY_TYPE_BULLET = 1;
 const ENTITY_TYPE_SNAKE = 2;
 const ENTITY_TYPE_SPIDER = 3;
 const ENTITY_TYPE_GEM = 6;
-const PLAYER_SPEED = 2;
-const BULLET_SPEED = 4;
-const SPIDER_SPEED = 1;
+
+const PLAYER_SPEED = 1;
+const BULLET_SPEED = 2;
+const SPIDER_SPEED = 0.5;
+
 const MAX_ENTITIES = 2000;
 
 type EntityId = number;
@@ -40,7 +41,7 @@ const entityData = {
   dx: new Float32Array(MAX_ENTITIES),
   dy: new Float32Array(MAX_ENTITIES),
   health: new Int32Array(MAX_ENTITIES),
-  cooldown: new Uint32Array(MAX_ENTITIES),
+  cooldown: new Int32Array(MAX_ENTITIES),
 } as const;
 
 const player: EntityId = createEntity(ENTITY_TYPE_PLAYER, CENTER_X, CENTER_Y);
@@ -50,12 +51,12 @@ const startTime = Date.now();
 let time = 0;
 let score = 0;
 let musicStarted = false;
-let threshold = 0;
+// let threshold = 0;
 
 initKeys(canvas);
 initMouse(canvas);
 
-function createEntity(_entityType: number, _x: number, _y: number, _dx = 0, _dy = 0): EntityId {
+function createEntity(_entityType: number, _x: number, _y: number, _dx = 0, _dy = 0, _health = 100): EntityId {
   let entityId: EntityId;
   if (entityIdFreeList.length === 0) {
     if (nextFreeEntityId === MAX_ENTITIES) {
@@ -73,7 +74,7 @@ function createEntity(_entityType: number, _x: number, _y: number, _dx = 0, _dy 
   y[entityId] = _y;
   dx[entityId] = _dx;
   dy[entityId] = _dy;
-  health[entityId] = 100;
+  health[entityId] = _health;
   cooldown[entityId] = 0;
 
   entities.push(entityId);
@@ -81,13 +82,13 @@ function createEntity(_entityType: number, _x: number, _y: number, _dx = 0, _dy 
   return entityId;
 }
 
-function randomEnemy(): void {
-  const entityType = Math.random() < 0.5 ? ENTITY_TYPE_SNAKE : ENTITY_TYPE_SPIDER;
-  const theta = Math.random() * Math.PI * 2;
-  const x = CENTER_X + Math.cos(theta) * CENTER_X * 1.5;
-  const y = CENTER_Y + Math.sin(theta) * CENTER_X * 1.5;
-  createEntity(entityType, x, y);
-}
+// function randomEnemy(): void {
+//   const entityType = Math.random() < 0.5 ? ENTITY_TYPE_SNAKE : ENTITY_TYPE_SPIDER;
+//   const theta = Math.random() * Math.PI * 2;
+//   const x = CENTER_X + Math.cos(theta) * CENTER_X * 1.5;
+//   const y = CENTER_Y + Math.sin(theta) * CENTER_X * 1.5;
+//   createEntity(entityType, x, y);
+// }
 
 function gameLoop(): void {
   if (entityData.health[player] > 0) {
@@ -95,15 +96,15 @@ function gameLoop(): void {
 
     // At t=0, randomness = 0.01
     // At t=60, randomness = 0.1
-    threshold = 0.01 + time * 0.001;
-    if (Math.random() < threshold) {
-      randomEnemy();
-    }
+    // threshold = 0.01 + time * 0.001;
+    // if (Math.random() < threshold) {
+    //   randomEnemy();
+    // }
 
     updateKeys();
     updateMouse();
     handleInput();
-    ai();
+    runSystems();
     collisionDetection();
   }
 }
@@ -135,7 +136,6 @@ function handleInput(): void {
 
 function shoot(shooter: EntityId, targetX: number, targetY: number, sound = false): void {
   const { cooldown, x, y } = entityData;
-  console.log(`Cooldown: ${cooldown[shooter]}`);
   if (cooldown[shooter] <= 0) {
     const dist = Math.hypot(targetX - x[shooter], targetY - y[shooter]);
     createEntity(
@@ -144,6 +144,7 @@ function shoot(shooter: EntityId, targetX: number, targetY: number, sound = fals
       y[shooter],
       ((targetX - x[shooter]) / dist) * BULLET_SPEED,
       ((targetY - y[shooter]) / dist) * BULLET_SPEED,
+      100,
     );
     cooldown[shooter] = 10;
     if (sound) {
@@ -153,7 +154,7 @@ function shoot(shooter: EntityId, targetX: number, targetY: number, sound = fals
   }
 }
 
-function ai(): void {
+function runSystems(): void {
   const { x, y, dx, dy, cooldown, entityType, health } = entityData;
 
   for (let i = entities.length - 1; i >= 0; i--) {
@@ -162,16 +163,27 @@ function ai(): void {
     y[entity] += dy[entity];
     if (cooldown[entity] > 0) cooldown[entity]--;
 
-    if (entityType[entity] === ENTITY_TYPE_SNAKE || entityType[entity] === ENTITY_TYPE_SPIDER) {
-      attackAi(entity);
+    switch (entityType[entity]) {
+      case ENTITY_TYPE_SNAKE:
+      case ENTITY_TYPE_SPIDER:
+        attackAi(entity);
+        break;
+      case ENTITY_TYPE_BULLET:
+        health[entity] -= 0.5;
+        break;
+      default:
     }
 
-    // Clear out dead entities
     if (health[entity] <= 0) {
+      // Clear out dead entities
       entities.splice(i, 1);
       entityIdFreeList.push(entity);
     }
   }
+
+  // sort free list... intuition is that you can keep reusing indices in order which should lead to better caching
+  // this is not proven though...
+  entityIdFreeList.sort((a: number, b: number) => b - a);
 }
 
 function attackAi(e: EntityId): void {
@@ -257,14 +269,15 @@ const distance = (a: EntityId, b: EntityId): number => {
   return Math.hypot(x[a] - x[b], y[a] - y[b]);
 };
 
-function renderWithUpdate(): void {
+function renderWithGameUpdate(): void {
   gameLoop();
   render();
-  requestAnimationFrame(skipFrame);
+  requestAnimationFrame(renderWithGameUpdate);
 }
 
-function skipFrame(): void {
-  requestAnimationFrame(renderWithUpdate);
-}
+setInterval(() => {
+  console.log(`Entities: ${entities}`);
+  console.log(`Free list: ${entityIdFreeList}`);
+}, 2000);
 
-requestAnimationFrame(renderWithUpdate);
+requestAnimationFrame(renderWithGameUpdate);
