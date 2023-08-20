@@ -3,13 +3,15 @@ import { initMouse, mouse, updateMouse } from "./mouse";
 import { music } from "./music";
 import { zzfx, zzfxP } from "./zzfx";
 
+const DEBUG = process.env.NODE_ENV === "production";
+const debug = DEBUG ? console.log : () => {};
+
 const WIDTH = 480;
 const HEIGHT = 270;
 const CENTER_X = WIDTH / 2;
 const CENTER_Y = HEIGHT / 2;
-const MILLIS_PER_SECOND = 1000;
-const FRAMES_PER_SECOND = 30;
-const MILLIS_PER_FRAME = MILLIS_PER_SECOND / FRAMES_PER_SECOND;
+// const MILLIS_PER_SECOND = 1000;
+// const FRAMES_PER_SECOND = 30;
 const ENTITY_TYPE_PLAYER = 0;
 const ENTITY_TYPE_BULLET = 1;
 const ENTITY_TYPE_SNAKE = 2;
@@ -18,16 +20,9 @@ const ENTITY_TYPE_GEM = 6;
 const PLAYER_SPEED = 2;
 const BULLET_SPEED = 4;
 const SPIDER_SPEED = 1;
+const MAX_ENTITIES = 1000;
 
-interface Entity {
-  entityType: number;
-  x: number;
-  y: number;
-  dx: number;
-  dy: number;
-  health: number;
-  cooldown: number;
-}
+type EntityId = number;
 
 const canvas = document.querySelector("#c") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
@@ -35,9 +30,20 @@ const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 const image = new Image();
 image.src = "i.png";
 
-const entities: Entity[] = [];
+const entityIdFreeList = [] as number[];
+const entities = [] as EntityId[];
+let nextFreeEntityId = 0;
+const entityData = {
+  entityType: new Uint8Array(MAX_ENTITIES),
+  x: new Int32Array(MAX_ENTITIES),
+  y: new Int32Array(MAX_ENTITIES),
+  dx: new Int32Array(MAX_ENTITIES),
+  dy: new Int32Array(MAX_ENTITIES),
+  health: new Uint32Array(MAX_ENTITIES),
+  cooldown: new Uint32Array(MAX_ENTITIES),
+} as const;
 
-const player = createEntity(ENTITY_TYPE_PLAYER, CENTER_X, CENTER_Y);
+const player: EntityId = createEntity(ENTITY_TYPE_PLAYER, CENTER_X, CENTER_Y);
 
 const startTime = Date.now();
 
@@ -49,18 +55,30 @@ let threshold = 0;
 initKeys(canvas);
 initMouse(canvas);
 
-function createEntity(entityType: number, x: number, y: number, dx = 0, dy = 0): Entity {
-  const e = {
-    entityType,
-    x,
-    y,
-    dx,
-    dy,
-    health: 100,
-    cooldown: 0,
-  };
-  entities.push(e);
-  return e;
+function createEntity(_entityType: number, _x: number, _y: number, _dx = 0, _dy = 0): EntityId {
+  let entityId: EntityId;
+  if (entityIdFreeList.length === 0) {
+    if (nextFreeEntityId === MAX_ENTITIES) {
+      DEBUG && debug("EXCEEDED MAX ENTITIES");
+      return -1;
+    }
+    entityId = nextFreeEntityId++;
+  } else {
+    entityId = entityIdFreeList.pop()!;
+  }
+
+  const { entityType, x, y, dx, dy, health, cooldown } = entityData;
+  entityType[entityId] = _entityType;
+  x[entityId] = _x;
+  y[entityId] = _y;
+  dx[entityId] = _dx;
+  dy[entityId] = _dy;
+  health[entityId] = 100;
+  cooldown[entityId] = 0;
+
+  entities.push(entityId);
+
+  return entityId;
 }
 
 function randomEnemy(): void {
@@ -72,7 +90,7 @@ function randomEnemy(): void {
 }
 
 function gameLoop(): void {
-  if (player.health > 0) {
+  if (entityData.health[player] > 0) {
     time = (Date.now() - startTime) / 1000;
 
     // At t=0, randomness = 0.01
@@ -91,21 +109,22 @@ function gameLoop(): void {
 }
 
 function handleInput(): void {
+  const { x, y } = entityData;
   if (!musicStarted && mouse.buttons[0].down) {
     musicStarted = true;
     zzfxP(...music).loop = true;
   }
   if (keys[KEY_UP].down || keys[KEY_W].down) {
-    player.y -= PLAYER_SPEED;
+    y[player] -= PLAYER_SPEED;
   }
   if (keys[KEY_LEFT].down || keys[KEY_A].down) {
-    player.x -= PLAYER_SPEED;
+    x[player] -= PLAYER_SPEED;
   }
   if (keys[KEY_DOWN].down || keys[KEY_S].down) {
-    player.y += PLAYER_SPEED;
+    y[player] += PLAYER_SPEED;
   }
   if (keys[KEY_RIGHT].down || keys[KEY_D].down) {
-    player.x += PLAYER_SPEED;
+    x[player] += PLAYER_SPEED;
   }
   if (mouse.buttons[0].down) {
     const targetX = (mouse.x / canvas.offsetWidth) * WIDTH;
@@ -114,66 +133,77 @@ function handleInput(): void {
   }
 }
 
-function shoot(shooter: Entity, targetX: number, targetY: number, sound = false): void {
-  if (shooter.cooldown <= 0) {
-    const dist = Math.hypot(targetX - shooter.x, targetY - shooter.y);
+function shoot(shooter: EntityId, targetX: number, targetY: number, sound = false): void {
+  const { cooldown, x, y } = entityData;
+  console.log(`Cooldown: ${cooldown[shooter]}`);
+  if (cooldown[shooter] <= 0) {
+    const dist = Math.hypot(targetX - x[shooter], targetY - y[shooter]);
     createEntity(
       ENTITY_TYPE_BULLET,
-      shooter.x,
-      shooter.y,
-      ((targetX - shooter.x) / dist) * BULLET_SPEED,
-      ((targetY - shooter.y) / dist) * BULLET_SPEED,
+      x[shooter],
+      y[shooter],
+      ((targetX - x[shooter]) / dist) * BULLET_SPEED,
+      ((targetY - y[shooter]) / dist) * BULLET_SPEED,
     );
-    shooter.cooldown = 10;
+    cooldown[shooter] = 10;
     if (sound) {
+      /* eslint-disable-next-line no-sparse-arrays */
       zzfx(...[, , 90, , 0.01, 0.03, 4, , , , , , , 9, 50, 0.2, , 0.2, 0.01]);
     }
   }
 }
 
 function ai(): void {
+  const { x, y, dx, dy, cooldown, entityType, health } = entityData;
+
   for (let i = entities.length - 1; i >= 0; i--) {
     const entity = entities[i];
-    entity.x += entity.dx;
-    entity.y += entity.dy;
-    entity.cooldown--;
+    x[entity] += dx[entity];
+    y[entity] += dy[entity];
+    if (cooldown[entity] > 0) cooldown[entity]--;
 
-    if (entity.entityType === ENTITY_TYPE_SNAKE || entity.entityType === ENTITY_TYPE_SPIDER) {
+    if (entityType[entity] === ENTITY_TYPE_SNAKE || entityType[entity] === ENTITY_TYPE_SPIDER) {
       attackAi(entity);
     }
 
     // Clear out dead entities
-    if (entity.health <= 0) {
+    if (health[entity] <= 0) {
       entities.splice(i, 1);
+      entityIdFreeList.push(i);
     }
   }
 }
 
-function attackAi(e: Entity): void {
-  const dx = player.x - e.x;
-  const dy = player.y - e.y;
+function attackAi(e: EntityId): void {
+  const { x, y } = entityData;
+  const dx = x[player] - x[e];
+  const dy = y[player] - y[e];
   const dist = Math.hypot(dx, dy);
-  e.x += (dx / dist) * SPIDER_SPEED;
-  e.y += (dy / dist) * SPIDER_SPEED;
+  x[e] += (dx / dist) * SPIDER_SPEED;
+  y[e] += (dy / dist) * SPIDER_SPEED;
 }
 
 function collisionDetection(): void {
+  const { entityType, health } = entityData;
   for (const entity of entities) {
     for (const other of entities) {
       if (entity !== other && distance(entity, other) < 8) {
         if (
-          entity.entityType === ENTITY_TYPE_BULLET &&
-          (other.entityType === ENTITY_TYPE_SNAKE || other.entityType === ENTITY_TYPE_SPIDER)
+          entityType[entity] === ENTITY_TYPE_BULLET &&
+          (entityType[other] === ENTITY_TYPE_SNAKE || entityType[other] === ENTITY_TYPE_SPIDER)
         ) {
-          entity.health = 0; // Kill the bullet
-          other.entityType = ENTITY_TYPE_GEM; // Turn the bullet into a gem
+          health[entity] = 0; // Kill the bullet
+          entityType[other] = ENTITY_TYPE_GEM; // Turn the bullet into a gem
           /* eslint-disable-next-line no-sparse-arrays */
           zzfx(...[0.4, , 368, 0.01, 0.1, 0.3, 4, 0.31, , , , , , 1.7, , 0.4, , 0.46, 0.1]);
         }
-        if (entity === player && (other.entityType === ENTITY_TYPE_SNAKE || other.entityType === ENTITY_TYPE_SPIDER)) {
-          entity.health -= 10; // Hurt the player
-          other.health = 0; // Remove the enemy
-          if (player.health <= 0) {
+        if (
+          entity === player &&
+          (entityType[other] === ENTITY_TYPE_SNAKE || entityType[other] === ENTITY_TYPE_SPIDER)
+        ) {
+          health[entity] -= 10; // Hurt the player
+          health[other] = 0; // Remove the enemy
+          if (health[player] <= 0) {
             // Game over
             /* eslint-disable-next-line no-sparse-arrays */
             zzfx(...[2.89, , 752, 0.04, 0.4, 0.44, 1, 1.39, 1, , , , 0.15, 1.3, 19, 0.9, 0.32, 0.39, 0.15, 0.31]);
@@ -184,9 +214,9 @@ function collisionDetection(): void {
             zzfx(...[2, , 433, 0.01, 0.06, 0.11, 1, 2.79, 7.7, -8.6, , , , 1.7, , 0.4, , 0.54, 0.05]);
           }
         }
-        if (entity === player && other.entityType === ENTITY_TYPE_GEM) {
+        if (entity === player && entityType[other] === ENTITY_TYPE_GEM) {
           score += 100;
-          other.health = 0;
+          health[other] = 0;
           /* eslint-disable-next-line no-sparse-arrays */
           zzfx(...[, , 1267, 0.01, 0.09, 0.15, , 1.95, , , 412, 0.06, , , , , , 0.45, 0.02]);
         }
@@ -196,14 +226,16 @@ function collisionDetection(): void {
 }
 
 function render(): void {
+  const { entityType, health, x, y } = entityData;
+
   ctx.fillStyle = "#111";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
   for (const entity of entities) {
-    ctx.drawImage(image, entity.entityType * 8, 8, 8, 8, entity.x | 0, entity.y | 0, 8, 8);
+    ctx.drawImage(image, entityType[entity] * 8, 8, 8, 8, x[entity] | 0, y[entity] | 0, 8, 8);
   }
 
-  drawString("HEALTH  " + player.health, 4, 5);
+  drawString("HEALTH  " + health[player], 4, 5);
   drawString("SCORE   " + score, 4, 15);
   drawString("TIME    " + (time | 0), 4, 25);
 
@@ -220,7 +252,10 @@ function drawString(str: string, x: number, y: number): void {
   }
 }
 
-const distance = (a: Entity, b: Entity): number => Math.hypot(a.x - b.x, a.y - b.y);
+const distance = (a: EntityId, b: EntityId): number => {
+  const { x, y } = entityData;
+  return Math.hypot(x[a] - x[b], y[a] - y[b]);
+};
 
 function renderWithUpdate(): void {
   gameLoop();
