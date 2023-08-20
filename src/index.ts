@@ -225,11 +225,10 @@ const distance = (a: Entity, b: Entity): number => Math.hypot(a.x - b.x, a.y - b
 function renderWithUpdate(): void {
   gameLoop();
   render();
-  requestAnimationFrame(renderWithoutUpdate);
+  requestAnimationFrame(skipFrame);
 }
 
-function renderWithoutUpdate(): void {
-  render();
+function skipFrame(): void {
   requestAnimationFrame(renderWithUpdate);
 }
 
