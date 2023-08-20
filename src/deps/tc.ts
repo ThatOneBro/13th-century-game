@@ -290,7 +290,7 @@ function TinyCanvas(canvas: HTMLCanvasElement): Renderer | null {
         d = mat[3],
         e = mat[4],
         f = mat[5],
-        argb = renderer!.col;
+        argb = renderer.col;
 
       let offset = 0;
 
