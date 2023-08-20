@@ -243,7 +243,8 @@ function render(): void {
   ctx.fillStyle = "#111";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  for (const entity of entities) {
+  for (let i = 0; i < entities.length; i += 1) {
+    const entity = entities[i];
     ctx.drawImage(image, entityType[entity] * 8, 8, 8, 8, x[entity] | 0, y[entity] | 0, 8, 8);
   }
 
@@ -275,9 +276,10 @@ function renderWithGameUpdate(): void {
   requestAnimationFrame(renderWithGameUpdate);
 }
 
-setInterval(() => {
-  console.log(`Entities: ${entities}`);
-  console.log(`Free list: ${entityIdFreeList}`);
-}, 2000);
+DEBUG &&
+  setInterval(() => {
+    console.log(`Entities: ${entities}`);
+    console.log(`Free list: ${entityIdFreeList}`);
+  }, 2000);
 
 requestAnimationFrame(renderWithGameUpdate);
