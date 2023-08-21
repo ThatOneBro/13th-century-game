@@ -2,7 +2,9 @@ import { initKeys, KEY_A, KEY_D, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_S, KEY_UP, K
 import { initMouse, mouse, updateMouse } from "./mouse";
 import { music } from "./music";
 import { zzfx, zzfxP } from "./deps/zzfx";
+
 import { TC, TCTex } from "./deps/tc";
+import type { WebGLTextureType } from "./deps/tc";
 
 const DEBUG = import.meta.env.DEV;
 const debug = DEBUG ? console.log : () => {};
@@ -29,15 +31,51 @@ type EntityId = number;
 const canvas = document.querySelector("#c") as HTMLCanvasElement;
 const renderer = TC(canvas)!; // This is dangerous but in dev mode if the renderer fails to intialize we will get a debug message
 DEBUG && !renderer && debug("The WebGL renderer is broken!");
+renderer.bkg(0.1, 0.1, 0.1);
 
 const image = new Image();
 image.src = "i.png";
+
+async function waitForImgLoad(): Promise<void> {
+  return new Promise((res) => {
+    image.addEventListener("load", (_e: Event) => {
+      res(void 0);
+    });
+  });
+}
+
+await waitForImgLoad();
+
 const textureAtlas = TCTex(renderer.g, image, image.width, image.height)!;
 DEBUG && !textureAtlas && debug("The texture atlas failed to load!");
+
+class Sprite {
+  width: number;
+  height: number;
+  u0: number;
+  v0: number;
+  u1: number;
+  v1: number;
+  halfWidth: number;
+
+  constructor(texture: WebGLTextureType, frameX: number, frameY: number, frameW: number, frameH: number) {
+    this.width = frameW;
+    this.height = frameH;
+    this.u0 = frameX / texture.width;
+    this.v0 = frameY / texture.height;
+    this.u1 = this.u0 + frameW / texture.width;
+    this.v1 = this.v0 + frameH / texture.height;
+    this.halfWidth = frameW / 2;
+  }
+}
+
+const sprites = [] as Sprite[];
+const glyphs = [] as Sprite[];
 
 const entityIdFreeList = [] as number[];
 const entities = [] as EntityId[];
 let nextFreeEntityId = 0;
+
 const entityData = {
   entityType: new Uint8Array(MAX_ENTITIES),
   x: new Float32Array(MAX_ENTITIES),
@@ -55,7 +93,7 @@ const startTime = Date.now();
 let time = 0;
 let score = 0;
 let musicStarted = false;
-// let threshold = 0;
+let threshold = 0;
 
 initKeys(canvas);
 initMouse(canvas);
@@ -86,13 +124,13 @@ function createEntity(_entityType: number, _x: number, _y: number, _dx = 0, _dy 
   return entityId;
 }
 
-// function randomEnemy(): void {
-//   const entityType = Math.random() < 0.5 ? ENTITY_TYPE_SNAKE : ENTITY_TYPE_SPIDER;
-//   const theta = Math.random() * Math.PI * 2;
-//   const x = CENTER_X + Math.cos(theta) * CENTER_X * 1.5;
-//   const y = CENTER_Y + Math.sin(theta) * CENTER_X * 1.5;
-//   createEntity(entityType, x, y);
-// }
+function randomEnemy(): void {
+  const entityType = Math.random() < 0.5 ? ENTITY_TYPE_SNAKE : ENTITY_TYPE_SPIDER;
+  const theta = Math.random() * Math.PI * 2;
+  const x = CENTER_X + Math.cos(theta) * CENTER_X * 1.5;
+  const y = CENTER_Y + Math.sin(theta) * CENTER_X * 1.5;
+  createEntity(entityType, x, y);
+}
 
 function gameLoop(): void {
   if (entityData.health[player] > 0) {
@@ -100,10 +138,10 @@ function gameLoop(): void {
 
     // At t=0, randomness = 0.01
     // At t=60, randomness = 0.1
-    // threshold = 0.01 + time * 0.001;
-    // if (Math.random() < threshold) {
-    //   randomEnemy();
-    // }
+    threshold = 0.01 + time * 0.001;
+    if (Math.random() < threshold) {
+      randomEnemy();
+    }
 
     updateKeys();
     updateMouse();
@@ -242,13 +280,20 @@ function collisionDetection(): void {
 }
 
 function render(): void {
-  const { entityType, health, x, y } = entityData;
+  const { entityType, x, y, health } = entityData;
 
-  renderer.bkg(0x1, 0x1, 0x1);
+  renderer.cls();
 
   for (let i = 0; i < entities.length; i += 1) {
     const entity = entities[i];
-    renderer.img(textureAtlas, entityType[entity] * 8, 8, 8, 8, x[entity] | 0, y[entity] | 0, 8, 8);
+    sprites[entityType[entity]] ??= new Sprite(textureAtlas, entityType[entity] * 8, 8, 8, 8);
+    const { halfWidth, width, height, u0, v0, u1, v1 } = sprites[entityType[entity]];
+
+    renderer.push();
+    renderer.trans(x[entity], y[entity]);
+    renderer.rot(0);
+    renderer.img(textureAtlas, -halfWidth, 0, width, height, u0, v0, u1, v1);
+    renderer.pop();
   }
 
   drawString("HEALTH  " + health[player], 4, 5);
@@ -265,7 +310,13 @@ function drawString(str: string, x: number, y: number): void {
   for (let i = 0; i < str.length; i++) {
     const charCode = str.charCodeAt(i);
     const charIndex = charCode < 65 ? charCode - 48 : charCode - 55;
-    renderer.img(textureAtlas, charIndex * 6, 0, 6, 6, x, y, 6, 6);
+    glyphs[charIndex] ??= new Sprite(textureAtlas, charIndex * 6, 0, 6, 6);
+    const { halfWidth, width, height, u0, v0, u1, v1 } = glyphs[charIndex];
+    renderer.push();
+    renderer.trans(x, y);
+    renderer.rot(0);
+    renderer.img(textureAtlas, -halfWidth, 0, width, height, u0, v0, u1, v1);
+    renderer.pop();
     x += 6;
   }
 }

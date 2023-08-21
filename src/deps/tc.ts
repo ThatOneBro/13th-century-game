@@ -23,12 +23,12 @@
  *
  */
 
-type WebGLTextureType = WebGLTexture & {
+export type WebGLTextureType = WebGLTexture & {
   width: number;
   height: number;
 };
 
-type Renderer = {
+export type Renderer = {
   g: WebGL2RenderingContext;
   c: HTMLCanvasElement;
   col: number;
@@ -294,11 +294,11 @@ function TinyCanvas(canvas: HTMLCanvasElement): Renderer | null {
 
       let offset = 0;
 
-      if (texture != currentTexture || count + 1 >= MAX_BATCH) {
+      if (texture !== currentTexture || count + 1 >= MAX_BATCH) {
         glBufferSubData(34962, 0, vertexData);
         glDrawElements(4, count * VERTICES_PER_QUAD, 5123, 0);
         count = 0;
-        if (currentTexture != texture) {
+        if (currentTexture !== texture) {
           currentTexture = texture;
           glBindTexture(3553, currentTexture);
         }
