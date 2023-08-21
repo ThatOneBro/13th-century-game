@@ -334,8 +334,8 @@ function renderWithGameUpdate(): void {
 
 DEBUG &&
   setInterval(() => {
-    console.log(`Entities: ${entities}`);
-    console.log(`Free list: ${entityIdFreeList}`);
+    debug(`Entities: ${entities}`);
+    debug(`Free list: ${entityIdFreeList}`);
   }, 2000);
 
 requestAnimationFrame(renderWithGameUpdate);
