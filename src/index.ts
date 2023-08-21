@@ -1,4 +1,17 @@
-import { initKeys, KEY_A, KEY_D, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_S, KEY_UP, KEY_W, keys, updateKeys } from "./keys";
+import {
+  initKeys,
+  KEY_A,
+  KEY_D,
+  KEY_DOWN,
+  KEY_LEFT,
+  KEY_RIGHT,
+  KEY_S,
+  KEY_UP,
+  KEY_W,
+  KEY_SPACE,
+  keys,
+  updateKeys,
+} from "./keys";
 import { initMouse, mouse, updateMouse } from "./mouse";
 import { music } from "./music";
 import { zzfx, zzfxP } from "./deps/zzfx";
@@ -94,7 +107,7 @@ async function main(): Promise<void> {
   let time = 0;
   let score = 0;
   let musicStarted = false;
-  let threshold = 0;
+  // let threshold = 0;
 
   initKeys(canvas);
   initMouse(canvas);
@@ -125,13 +138,13 @@ async function main(): Promise<void> {
     return entityId;
   }
 
-  function randomEnemy(): void {
-    const entityType = Math.random() < 0.5 ? ENTITY_TYPE_SNAKE : ENTITY_TYPE_SPIDER;
-    const theta = Math.random() * Math.PI * 2;
-    const x = CENTER_X + Math.cos(theta) * CENTER_X * 1.5;
-    const y = CENTER_Y + Math.sin(theta) * CENTER_X * 1.5;
-    createEntity(entityType, x, y);
-  }
+  // function randomEnemy(): void {
+  //   const entityType = Math.random() < 0.5 ? ENTITY_TYPE_SNAKE : ENTITY_TYPE_SPIDER;
+  //   const theta = Math.random() * Math.PI * 2;
+  //   const x = CENTER_X + Math.cos(theta) * CENTER_X * 1.5;
+  //   const y = CENTER_Y + Math.sin(theta) * CENTER_X * 1.5;
+  //   createEntity(entityType, x, y);
+  // }
 
   function gameLoop(): void {
     if (entityData.health[player] > 0) {
@@ -139,10 +152,10 @@ async function main(): Promise<void> {
 
       // At t=0, randomness = 0.01
       // At t=60, randomness = 0.1
-      threshold = 0.01 + time * 0.001;
-      if (Math.random() < threshold) {
-        randomEnemy();
-      }
+      // threshold = 0.01 + time * 0.001;
+      // if (Math.random() < threshold) {
+      //   randomEnemy();
+      // }
 
       updateKeys();
       updateMouse();
@@ -152,24 +165,60 @@ async function main(): Promise<void> {
     }
   }
 
+  const HORSE_GALLOP_SLOW_RATE = 0.015;
+  const HORSE_TROT_SLOW_RATE = 0.025;
+
   function handleInput(): void {
-    const { x, y } = entityData;
+    const { dx, dy } = entityData;
     if (!musicStarted && mouse.buttons[0].down) {
       musicStarted = true;
       zzfxP(...music).loop = true;
     }
+
+    // let moving = false;
+
     if (keys[KEY_UP].down || keys[KEY_W].down) {
-      y[player] -= PLAYER_SPEED;
+      dy[player] = -PLAYER_SPEED;
+      // moving = true;
     }
     if (keys[KEY_LEFT].down || keys[KEY_A].down) {
-      x[player] -= PLAYER_SPEED;
+      dx[player] = -PLAYER_SPEED;
+      // moving = true;
     }
     if (keys[KEY_DOWN].down || keys[KEY_S].down) {
-      y[player] += PLAYER_SPEED;
+      dy[player] = PLAYER_SPEED;
+      // moving = true;
     }
     if (keys[KEY_RIGHT].down || keys[KEY_D].down) {
-      x[player] += PLAYER_SPEED;
+      dx[player] = PLAYER_SPEED;
+      // moving = true;
     }
+
+    if (keys[KEY_SPACE].down) {
+      if (dx[player] < 0) {
+        dx[player] += HORSE_TROT_SLOW_RATE;
+      } else if (dx[player] > 0) {
+        dx[player] -= HORSE_TROT_SLOW_RATE;
+      }
+
+      if (dy[player] < 0) {
+        dy[player] += HORSE_TROT_SLOW_RATE;
+      } else if (dy[player] > 0) {
+        dy[player] -= HORSE_TROT_SLOW_RATE;
+      }
+    }
+
+    // TODO: Do something that actually works here
+    // if (moving) {
+    //   /* eslint-disable-next-line no-sparse-arrays */
+    //   zzfx(...[1.1, , 393, 0.01, , 0.07, 2, 1.27, -16, 4.5, , , , , , 0.1, , 0.84, 0.01]);
+    //   setTimeout(() =>
+    //     zzfx(...[1.1, , 393, 0.01, , 0.07, 2, 1.27, -16, 4.5, , , , , , 0.1, , 0.84, 0.01]);
+    //   , 300);
+    //   /* eslint-disable-next-line no-sparse-arrays */
+    //   // zzfx(...[1.1, , 393, 0.01, 0.02, 0.07, 2, 1.27, -16, 4.5, 50, , , , , 0.1, , 0.55, 0.01]);
+    // }
+
     if (mouse.buttons[0].down) {
       const targetX = (mouse.x / canvas.offsetWidth) * WIDTH;
       const targetY = (mouse.y / canvas.offsetHeight) * HEIGHT;
