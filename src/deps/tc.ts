@@ -29,16 +29,27 @@ export type WebGLTextureType = WebGLTexture & {
 };
 
 export type Renderer = {
+  /** The WebGL2 context used by the renderer. */
   g: WebGL2RenderingContext;
+  /** The canvas element that the WebGL2 context is bound to. */
   c: HTMLCanvasElement;
+  /** Integer number representing the current tint color on the canvas. It's represented in ARGB (ex: 0xFFFFFFFF). */
   col: number;
+  /** Sets the background color. Maps to glClearColor. It requires normalized to 1.0 values. */
   bkg: (r: number, g: number, b: number) => void;
+  /** Clears the current frame buffer. */
   cls: () => void;
+  /** Applies a transformation to the current matrix. */
   trans: (x: number, y: number) => void;
+  /** Scales the current matrix. */
   scale: (x: number, y: number) => void;
+  /** Applies a rotation to the current matrix. */
   rot: (r: number) => void;
+  /** Pushes the current matrix into the matrix stack. */
   push: () => void;
+  /** Pops the matrix stack into the current matrix. */
   pop: () => void;
+  /** Batches texture rendering properties. NOTE: If you are not drawing a tile of a texture then you can set u0 = 0, v0 = 0, u1 = 1 and v1 = 1. */
   img: (
     texture: WebGLTextureType,
     x: number,
@@ -50,6 +61,7 @@ export type Renderer = {
     u1: number,
     v1: number,
   ) => void;
+  /** Pushes the current batch information to the GPU for rendering. */
   flush: () => void;
 };
 
