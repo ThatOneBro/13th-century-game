@@ -1,23 +1,23 @@
+import { zzfx, zzfxP } from "./deps/zzfx";
 import {
-  initKeys,
   KEY_A,
   KEY_D,
   KEY_DOWN,
   KEY_LEFT,
   KEY_RIGHT,
   KEY_S,
+  KEY_SPACE,
   KEY_UP,
   KEY_W,
-  KEY_SPACE,
+  initKeys,
   keys,
   updateKeys,
 } from "./keys";
 import { initMouse, mouse, updateMouse } from "./mouse";
 import { music } from "./music";
-import { zzfx, zzfxP } from "./deps/zzfx";
 
-import { TC, TCTex } from "./deps/tc";
 import type { WebGLTextureType } from "./deps/tc";
+import { TC, TCTex } from "./deps/tc";
 
 const DEBUG = import.meta.env.DEV;
 const debug = DEBUG ? console.log : () => {};
@@ -107,7 +107,7 @@ async function main(): Promise<void> {
   let time = 0;
   let score = 0;
   let musicStarted = false;
-  // let threshold = 0;
+  let threshold = 0;
 
   initKeys(canvas);
   initMouse(canvas);
@@ -138,13 +138,13 @@ async function main(): Promise<void> {
     return entityId;
   }
 
-  // function randomEnemy(): void {
-  //   const entityType = Math.random() < 0.5 ? ENTITY_TYPE_SNAKE : ENTITY_TYPE_SPIDER;
-  //   const theta = Math.random() * Math.PI * 2;
-  //   const x = CENTER_X + Math.cos(theta) * CENTER_X * 1.5;
-  //   const y = CENTER_Y + Math.sin(theta) * CENTER_X * 1.5;
-  //   createEntity(entityType, x, y);
-  // }
+  function randomEnemy(): void {
+    const entityType = Math.random() < 0.5 ? ENTITY_TYPE_SNAKE : ENTITY_TYPE_SPIDER;
+    const theta = Math.random() * Math.PI * 2;
+    const x = CENTER_X + Math.cos(theta) * CENTER_X * 1.5;
+    const y = CENTER_Y + Math.sin(theta) * CENTER_X * 1.5;
+    createEntity(entityType, x, y);
+  }
 
   function gameLoop(): void {
     if (entityData.health[player] > 0) {
@@ -152,10 +152,10 @@ async function main(): Promise<void> {
 
       // At t=0, randomness = 0.01
       // At t=60, randomness = 0.1
-      // threshold = 0.01 + time * 0.001;
-      // if (Math.random() < threshold) {
-      //   randomEnemy();
-      // }
+      threshold = 0.01 + time * 0.001;
+      if (Math.random() < threshold) {
+        randomEnemy();
+      }
 
       updateKeys();
       updateMouse();
@@ -165,7 +165,7 @@ async function main(): Promise<void> {
     }
   }
 
-  const HORSE_GALLOP_SLOW_RATE = 0.015;
+  // const HORSE_GALLOP_SLOW_RATE = 0.015;
   const HORSE_TROT_SLOW_RATE = 0.025;
 
   function handleInput(): void {
